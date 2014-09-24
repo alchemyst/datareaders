@@ -27,27 +27,39 @@ knownblocks = ['Curve Name',
                'Sample Holder',
                'Pan', ]
 
-def curveparser(block):
+def curveparser(blockname, block):
     colnames = ["Index", "Ts", "Tr", "Value"]
-    return pandas.read_table(StringIO('\n'.join(block)), 
-                             header=None,
-                             names=colnames,
-                             delimiter=' +',
-                             skiprows=[0,1],
-                             index_col='Index')
+    table = pandas.read_table(StringIO('\n'.join(block)),
+                              header=None,
+                              names=colnames,
+                              delimiter=' +',
+                              skiprows=[0,1],
+                              index_col='Index')
+    return {blockname: block}
 
-def flatten(block):
-    return block[0]
+def flatten(blockname, block):
+    return {blockname: '|'.join(block)}
 
-def sampleholderparser(block):
-    return block[0]
+def sampleholderparser(blockname, block):
+    return {'Pan Description': block[0],
+            'Pan Mass': float(block[1].split(':')[1].strip()),
+            'Pan Material': block[2].split(':')[1].strip()}
+
+def sampleparser(blockname, block):
+    description, mass = block[0].split(',')
+    return {'Sample Description': description,
+            'Sample Mass': float(mass.split()[0])}
+
+def remove(blockname, block):
+    return {}
     
 blockparsers = {'Curve Values': curveparser,
                 'Pan': sampleholderparser,
                 'Sample Holder': sampleholderparser,
                 'Method': flatten,
-                'Sample': flatten,
+                'Sample': sampleparser,
                 'Curve Name': flatten,
+                'Results': remove,
                 }
 
 def read_htc_file(f):
@@ -95,7 +107,10 @@ def read_htc_file(f):
     for c in curves:
         for blockname, blockparser in blockparsers.items():
             if blockname in c:
-                c[blockname] = blockparser(c[blockname])
+                # Remove block from dictionary and parse it
+                parsed = blockparser(blockname, c.pop(blockname))
+                # now, add new elements from parsed:
+                c.update(parsed)
 
     return curves
 
