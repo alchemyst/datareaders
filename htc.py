@@ -7,6 +7,7 @@ import numpy
 import pandas
 import re
 import io
+import os
 from StringIO import StringIO
 import logging
 
@@ -46,6 +47,7 @@ def read_htc_file(f):
     state = 'Waiting'
     
     curves = []
+    curvenumber = 0
     blocknumber = None
 
     for line in infile:
@@ -60,8 +62,12 @@ def read_htc_file(f):
             blockname = m.groups()[0]
             oldblocknumber = blocknumber
             blocknumber = knownblocks.index(blockname)
+            # We assume that blocks going in the wrong order means a
+            # new block.
             if oldblocknumber is None or blocknumber < oldblocknumber:
-                curve = {}
+                curve = {'Filename': os.path.basename(f),
+                         'Number': curvenumber}
+                curvenumber += 1
                 curves.append(curve)
                 logging.debug(" -- new curve -- ")
             curve[blockname] = blockdata
@@ -82,7 +88,7 @@ def read_htc_file(f):
 
 def read_dir(directory, mask='*.txt'):
     """ Read all the curves in a given directory """
-    import glob, os
+    import glob
     
     curves = []
     for f in glob.glob(os.path.join(directory, mask)):
