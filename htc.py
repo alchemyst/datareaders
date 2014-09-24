@@ -35,8 +35,20 @@ def curveparser(block):
                              delimiter=' +',
                              skiprows=[0,1],
                              index_col='Index')
+
+def flatten(block):
+    return block[0]
+
+def sampleholderparser(block):
+    return block[0]
     
-blockparsers = {'Curve Values': curveparser}
+blockparsers = {'Curve Values': curveparser,
+                'Pan': sampleholderparser,
+                'Sample Holder': sampleholderparser,
+                'Method': flatten,
+                'Sample': flatten,
+                'Curve Name': flatten,
+                }
 
 def read_htc_file(f):
     if hasattr(f, 'next'):
@@ -82,7 +94,8 @@ def read_htc_file(f):
     
     for c in curves:
         for blockname, blockparser in blockparsers.items():
-            c[blockname] = blockparser(c[blockname])
+            if blockname in c:
+                c[blockname] = blockparser(c[blockname])
 
     return curves
 
